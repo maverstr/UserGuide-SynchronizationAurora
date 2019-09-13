@@ -14,6 +14,11 @@
 \usepackage{color}
 \usepackage{pdfpages}
 \usepackage{listings}
+\lstset{
+  breaklines=true,
+  postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+}
+
 
 %% Sets page size and margins
 \usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
@@ -97,7 +102,7 @@ Jamie \textsc{Johnston}\\[0.3cm] % Supervisor's Name
 \section{Introduction}
 This user guide intends to provide the user with the information required to use and understand the synchronization device developed at JohnstonLab as well as giving some clues regarding troubleshooting.
 
-The last Version of the software is available on : \url{https://github.com/maverstr/i2cAurora}
+The last version of the software is available on : \url{https://github.com/maverstr/i2cAurora}
 
 \section{Objective}
 This device gathers from different experimental devices, either digital or analog signals, through different BNC connectors and some PS/2 connectors. 
@@ -142,7 +147,7 @@ There are also 2 PS/2 connectors used for the motion sensor using optical mice w
 
 \section{Software}
 The µC is programmed using the Arduino IDE.
-The code is quite simple and comes in 2 main parts:
+The code is quite simple and comes in a few main parts:
 (full main code available in appendix \ref{code})
 \subsection{Motion sensor acquisition and computation}
 Using the developed libraries, the µC receives data from 2 optical mice and compute the path taken by a running mouse on a ball.
@@ -171,15 +176,32 @@ The transmission itself is done using the Wire library.
 ScanImage acts as an I2C slave and is handled by MATLAB. This part will not be discussed here.
 
 \section{How to use?}
-Simply plug the connectors to the corresponding pins (or change them in the declaration part of the code).
+Simply plug the connectors to the corresponding pins (or change them in the declaration part of the code).\\
+
+If the optical mice motion sensor are not plugged in (or malfunctioning for whatever reason), make sure that 
+\begin{lstlisting}
+#define MOTION_SENSOR
+\end{lstlisting}
+IS commented. 
+If the optical mice are plugged in and working, and you want to use them, remove any "//" in front of that line to activate the relevant parts of the code. \\
+
 Use USB to power the Arduino and allow Serial communication to go through. Open the Serial Plotter using tools in Arduino IDE. You should see the relevant signal on the window.
 Note: the Serial rate is set to 500 000 bauds to allow fast communication of multiple signals at high sampling rate. You have to set the Serial Monitor and Plotter to this value.
 
 The values are automatically sent over I2C when triggered externally by the Labjack. If you want constant I2C communication without requiring a trigger, overwrite cameraTriggerValue to 1. Note that this may have unexpected results. 
 
 \section{Expected Results}
-When using the Serial plotter, the window should show the relevant signals in different colors.
-When opening the description of each frame of a tiff files (can easily be done using Python scripts (\url{https://vidriotech.gitlab.io/scanimagetiffreader-python/}), you should see a line of String data separated by spaces and representing the signals values in the order they were transmitted
+When using the Serial plotter, the window should show the relevant signals in different colors (see Figure \ref{fig:plotting} where respiration signal (human) is in red, optical mice X, Y, Z in reddish, blue and green and yellow here is a copy from red simulating the i2C scaling of the value.
+Other devices are not connected.).
+
+\begin{figure}[h!b!t!]
+    \centering
+    \includegraphics[width=12cm]{images/plotting.png}
+    \caption{I2C Synchronization plotting with multiple devices.}
+    \label{fig:plotting}
+\end{figure}
+
+When opening the description of each frame of a tiff files (can easily be done using Python scripts (\url{https://vidriotech.gitlab.io/scanimagetiffreader-python/}), you should see a line of String data separated by spaces and representing the signals values in the order they were transmitted.
 
 \section{Troubleshooting}
 \subsection{Nothing appears in the Serial plotter and Serial Monitor}
@@ -198,6 +220,19 @@ You must end your last Serial printing by a "LF" character (line feed), being "\
 Serial.print("yourData: "); Serial.println(yourData);
 \end{lstlisting}
 
+\subsection{Nothing plots on the Serial plotter and the Serial monitor shows "motion Sensor setup..." then nothing happens}
+It is because the optical mice motion sensor are not plugged in or malfunctioning and the program awaits a response from them to continue.
+Make sure to comment the line:
+\begin{lstlisting}
+#define MOTION_SENSOR
+\end{lstlisting}
+
+\subsection{The plotting shows only a few signals and the rest are straight lines or very small}
+The plotter does not automatically sets a scaling. Each value share the same axis. Therefore, a very low analog value or a digital value (highest value being 1) will appear extremely small or as a straight line in comparison.
+
+Simply multiply the value (in the Serial.print() only !) by a relevant gain.
+
+By default, the gain is set so that max values is 5000 (legacy from strain gauge 5V max value).
 
 \subsection{I can't send I2C data}
 Make sure that ScanImage is using the adress 0 as the I2C slave adress.
@@ -212,40 +247,41 @@ Check that you plugged your signal in the correct pin. Also check that this pin 
 
 \begin{lstlisting}
 
+
 /*TO ADD A NEW DATA:
- * add the corresponding pin in the code: 
- *    int myDataPin = "my pin number"
- *
- * add an acquisition value variable
- *    int myDataValue;
- *    
- * add an I2C array to transmit this value.
- * This array should have the size of the number of characters you want to send +1.
- * i.e. to send 327, the array size is 4, because each char is one byte and we want to transmit bytes.
- *    int myDataI2cArray["my required size"];
- *    
- * add the pinMode in Setup()
- *    pinMode(myDataPin, INPUT);
- *    
- * in the acquisition part (dataAcquisition() function)
- * add your data reading
- *  if it is a digital value:
- *    myDataValue = digitalRead(myDataPin)
- *    
- *  if it is an analog value:
- *    myDataValue = digitalRead(myDataPin);
- *    
- *    
- * add the value in plot:
- *     Serial.print("yourData: "); Serial.print(yourData); Serial.print(" ");
- *   Make sure that the last line of ArduinoPlotting is Serial.print(\n");
- *   
- * add the data in the bytes conversion function i2cDataTransform
- *    ((String)myDataValue).toCharArray(myDataI2cArray, my array size);
- *     
- * add the i2C communication line inbetween Wire.beginTransmission(0x00); and Wire.endTransmission();
- *    Wire.write(myDataI2cArray); Wire.write(" ");
-  */
+   add the corresponding pin in the code:
+      int myDataPin = "my pin number"
+
+   add an acquisition value variable
+      int myDataValue;
+
+   add an I2C array to transmit this value.
+   This array should have the size of the number of characters you want to send +1.
+   i.e. to send 327, the array size is 4, because each char is one byte and we want to transmit bytes.
+      int myDataI2cArray["my required size"];
+
+   add the pinMode in Setup()
+      pinMode(myDataPin, INPUT);
+
+   in the acquisition part (dataAcquisition() function)
+   add your data reading
+    if it is a digital value:
+      myDataValue = digitalRead(myDataPin)
+
+    if it is an analog value:
+      myDataValue = analogRead(myDataPin);
+
+
+   add the value in plot:
+       Serial.print("yourData: "); Serial.print(yourData); Serial.print(" ");
+     Make sure that the last line of ArduinoPlotting is Serial.print(\n");
+
+   add the data in the bytes conversion function i2cDataTransform
+      ((String)myDataValue).toCharArray(myDataI2cArray, my array size);
+
+   add the i2C communication line inbetween Wire.beginTransmission(0x00); and Wire.endTransmission();
+      Wire.write(myDataI2cArray); Wire.write(" ");
+*/
 \end{lstlisting}
 
 
