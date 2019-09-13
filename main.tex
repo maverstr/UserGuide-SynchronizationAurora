@@ -1,0 +1,270 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{eurosym}
+\usepackage{multirow}
+\usepackage{footnote}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{pdfpages}
+\usepackage{listings}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\begin{document}
+
+\begin{titlepage}
+
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % Defines a new command for the horizontal lines, change thickness here
+
+\center % Center everything on the page
+ 
+%----------------------------------------------------------------------------------------
+%	HEADING SECTIONS
+%----------------------------------------------------------------------------------------
+
+\textsc{\LARGE Ecole Polytechnique de Bruxelles}\\[1.5cm] % Name of your university/college
+\textsc{\LARGE University of Leeds}\\[1.5cm]
+\textsc{\large Johnston Lab Internship}\\[0.5cm] % Minor heading such as course title
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\HRule \\[0.4cm]
+{ \huge \bfseries User Guide: Devices Synchronization using Arduino MEGA controller as I2C master for data integration in tiff files}\\[0.4cm] % Title of your document
+\HRule \\[1.5cm]
+ 
+%----------------------------------------------------------------------------------------
+%	AUTHOR SECTION
+%----------------------------------------------------------------------------------------
+
+\begin{minipage}{0.4\textwidth}
+\begin{flushleft} \large
+\emph{Author:}\\
+Maxime \textsc{Verstraeten} % Your name
+\end{flushleft}
+\end{minipage}
+~
+\begin{minipage}{0.4\textwidth}
+\begin{flushright} \large
+\emph{Supervisor:} \\
+Jamie \textsc{Johnston}\\[0.3cm] % Supervisor's Name
+\end{flushright}
+\end{minipage}\\[2cm]
+
+% If you don't want a supervisor, uncomment the two lines below and remove the section above
+%\Large \emph{Author:}\\
+%John \textsc{Smith}\\[3cm] % Your name
+
+%----------------------------------------------------------------------------------------
+%	DATE SECTION
+%----------------------------------------------------------------------------------------
+
+{\large \today}\\[2cm] % Date, change the \today to a set date if you want to be precise
+
+%----------------------------------------------------------------------------------------
+
+\vfill % Fill the rest of the page with whitespace
+
+\end{titlepage}
+
+
+\noindent\rule{\textwidth}{1pt}
+
+\tableofcontents
+
+\newpage
+
+\listoffigures
+
+\newpage
+
+
+
+\section{Introduction}
+This user guide intends to provide the user with the information required to use and understand the synchronization device developed at JohnstonLab as well as giving some clues regarding troubleshooting.
+
+The last Version of the software is available on : \url{https://github.com/maverstr/i2cAurora}
+
+\section{Objective}
+This device gathers from different experimental devices, either digital or analog signals, through different BNC connectors and some PS/2 connectors. 
+It then is able to plot them in a user-friendly interface using Arduino Serial plotter to easily keep an eye on all the signals.
+
+It also acts as an I2C master device to transmit data through ScanImage (\url{http://scanimage.vidriotechnologies.com/display/SI2015/I2C+data+recording}) which emulates an I2C slave on the computer.
+ScanImage can then interpret this I2C Data and put it in the description of tiff files for each frame.
+
+This allows to have every signal values inside each frame metadata.
+
+The µC also gets data from two optical mice that act as a motion sensor and does the computation for the path taken by the mouse.
+
+\section{Hardware}
+\subsection{Arduino MEGA}
+The µC is the Arduino MEGA, chosen for the high number of analog and digital inputs as well as easy configuration and user-friendly plotting.
+
+
+\subsection{Enclosure}
+The enclosure contains the µC and hold it in place for simple manipulations. The enclosure also comes with 16 BNC holes and 2 PS/2 holes.
+The enclosure is chosen from RS: \url{https://uk.rs-online.com/web/p/general-purpose-enclosures/3815164/} and CAD designed for documentation purpose and easy hole drilling.
+
+\begin{figure}[h!t!b!]
+    \centering
+        \includegraphics[width = 10cm]{images/enclosure.PNG}
+    \caption{CAD View of the enclosure}
+    \label{fig:enclosure1}
+\end{figure}
+
+\begin{figure}[h!t!b!]
+    \centering
+        \includegraphics[width = 10cm]{images/enclosure2.PNG}
+    \caption{CAD View of the enclosure}
+    \label{fig:enclosure2}
+\end{figure}
+
+The Plans for drilling holes are presented in appendix \ref{plans} and are available on scale 1:1 on demand.
+
+\subsection{Connectors}
+The connectors used to transmit data are BNC connectors. This is actually not the best option but the more practical to use as everything in the lab presents BNC connectors and BNC cables.
+
+There are also 2 PS/2 connectors used for the motion sensor using optical mice which communicates using PS/2.
+
+\section{Software}
+The µC is programmed using the Arduino IDE.
+The code is quite simple and comes in 2 main parts:
+(full main code available in appendix \ref{code})
+\subsection{Motion sensor acquisition and computation}
+Using the developed libraries, the µC receives data from 2 optical mice and compute the path taken by a running mouse on a ball.
+This is all done in the additional .h and .cpp libraries.
+\begin{lstlisting}[language=C++]
+#include "MotionSensorAcq.h"
+\end{lstlisting}
+
+The mice are setup on setup part using "motionSensorSetup()" with defined clock and data pins in variable definition. Then the data is acquired using
+\begin{lstlisting}[language=C++]
+motionSensorAcq(&motionSensorValuesArray[0]);
+\end{lstlisting}
+which basically inserts the data into the pointed array.
+
+\subsection{Other data acquisition}
+The rest of the incoming data from other devices are simply processed using Arduino digital or analog read functions. Some data like the strain gauge are just re-scaled to proper values.
+
+\subsection{Plotting}
+The plotting is easily done by following the guidelines for Arduino Serial plotter.
+
+\subsection{I2C Communication}
+The integers value are first casted into String to be able to use the .toCharArray on them to form char arrays which can then be transmitted over I2C.
+The transmission itself is done using the Wire library.
+
+\subsection{I2C Slave}
+ScanImage acts as an I2C slave and is handled by MATLAB. This part will not be discussed here.
+
+\section{How to use?}
+Simply plug the connectors to the corresponding pins (or change them in the declaration part of the code).
+Use USB to power the Arduino and allow Serial communication to go through. Open the Serial Plotter using tools in Arduino IDE. You should see the relevant signal on the window.
+Note: the Serial rate is set to 500 000 bauds to allow fast communication of multiple signals at high sampling rate. You have to set the Serial Monitor and Plotter to this value.
+
+The values are automatically sent over I2C when triggered externally by the Labjack. If you want constant I2C communication without requiring a trigger, overwrite cameraTriggerValue to 1. Note that this may have unexpected results. 
+
+\section{Expected Results}
+When using the Serial plotter, the window should show the relevant signals in different colors.
+When opening the description of each frame of a tiff files (can easily be done using Python scripts (\url{https://vidriotech.gitlab.io/scanimagetiffreader-python/}), you should see a line of String data separated by spaces and representing the signals values in the order they were transmitted
+
+\section{Troubleshooting}
+\subsection{Nothing appears in the Serial plotter and Serial Monitor}
+Check that the baud rate is set to 500 000.
+
+\begin{figure}[h!b!t!]
+    \centering
+    \includegraphics[width = 6cm]{images/baud.PNG}
+    \caption{Set Baud rate to 500 000}
+    \label{fig:baud}
+\end{figure}
+
+\subsection{Nothing plots on the Serial Plotter and the Serial monitor shows a growing single line of values}
+You must end your last Serial printing by a "LF" character (line feed), being "\textbackslash n" or 0x0A in hex. Alternatively, you can also change your last print by: 
+\begin{lstlisting}
+Serial.print("yourData: "); Serial.println(yourData);
+\end{lstlisting}
+
+
+\subsection{I can't send I2C data}
+Make sure that ScanImage is using the adress 0 as the I2C slave adress.
+If not, you can change the slave adress in the code (either in integer or hex):
+\begin{lstlisting}
+Wire.beginTransmission(yourI2CSlaveAdressHere);
+\end{lstlisting}
+
+
+\subsection{My new data doesn't appear on the plot}
+Check that you plugged your signal in the correct pin. Also check that this pin is selected in the code as either digitalRead() or analogRead(). Just follow the guidelines in the code for each section (pin definition, data acquisition, plotting, I2C communication). The guidelines are written again here-below:
+
+\begin{lstlisting}
+
+/*TO ADD A NEW DATA:
+ * add the corresponding pin in the code: 
+ *    int myDataPin = "my pin number"
+ *
+ * add an acquisition value variable
+ *    int myDataValue;
+ *    
+ * add an I2C array to transmit this value.
+ * This array should have the size of the number of characters you want to send +1.
+ * i.e. to send 327, the array size is 4, because each char is one byte and we want to transmit bytes.
+ *    int myDataI2cArray["my required size"];
+ *    
+ * add the pinMode in Setup()
+ *    pinMode(myDataPin, INPUT);
+ *    
+ * in the acquisition part (dataAcquisition() function)
+ * add your data reading
+ *  if it is a digital value:
+ *    myDataValue = digitalRead(myDataPin)
+ *    
+ *  if it is an analog value:
+ *    myDataValue = digitalRead(myDataPin);
+ *    
+ *    
+ * add the value in plot:
+ *     Serial.print("yourData: "); Serial.print(yourData); Serial.print(" ");
+ *   Make sure that the last line of ArduinoPlotting is Serial.print(\n");
+ *   
+ * add the data in the bytes conversion function i2cDataTransform
+ *    ((String)myDataValue).toCharArray(myDataI2cArray, my array size);
+ *     
+ * add the i2C communication line inbetween Wire.beginTransmission(0x00); and Wire.endTransmission();
+ *    Wire.write(myDataI2cArray); Wire.write(" ");
+  */
+\end{lstlisting}
+
+
+\newpage
+
+\appendix
+
+\section{C++ Main Code}
+\label{code}
+\lstinputlisting[language=C++]{180829_i2c_aurora206_V3.ino}
+
+
+
+
+\includepdf[pagecommand= \section{Enclosure Plan 1 \label{plans}}, scale = 0.7, angle =0]{images/enclosureBiggerPlan1}
+
+\includepdf[pagecommand= \section{Enclosure Plan 2}, scale = 0.7, angle =0]{images/enclosureBiggerPlan2}
+
+\bibliographystyle{alpha}
+\bibliography{biblio}
+
+\end{document}
