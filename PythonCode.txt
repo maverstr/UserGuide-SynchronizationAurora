@@ -1,0 +1,57 @@
+import bokeh.plotting as bpl
+import cv2
+import glob
+import logging
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import time
+import pylab as pl
+import fnmatch
+import datetime
+try:
+   cv2.setNumThreads(0)
+except():
+   pass
+try:
+   if __IPYTHON__:
+       # this is used for debugging purposes only. allows to reload classes
+       # when changed
+       get_ipython().magic('load_ext autoreload')
+       get_ipython().magic('autoreload 2')
+except NameError:
+   pass
+from tifffile import imsave
+from ScanImageTiffReader import ScanImageTiffReader as tiffread
+import re
+bpl.output_notebook()
+fnames=["D:/test/i2c_test/i2c_test_00010_00001.tif"]
+import os
+scanimage = tiffread(fnames[0])#'gluDil01_00001.tif')
+metadata = scanimage.metadata()
+deets = scanimage.description(0)
+for i in range(100):
+   print(scanimage.description(i))
+#get relevant metadata
+fr = re.search('scanFrameRate = (\w+)', metadata, re.IGNORECASE)
+ave = re.search('logAverageFactor = (\w+)', metadata, re.IGNORECASE)
+channels = re.search('channelsAvailable = (\w+)', metadata, re.IGNORECASE)
+zoom = re.search('scanZoomFactor = (\w+)',metadata,re.IGNORECASE)
+pixelsPerLine = re.search('pixelsPerLine = (\w+)',metadata,re.IGNORECASE)
+fr = float(fr.group(1))
+ave = float(ave.group(1))
+channels = int(channels.group(1))
+zoom = float(zoom.group(1))
+pixelsPerLine = float(pixelsPerLine.group(1))
+FOV = 910/zoom
+fr = fr/ave;
+pixSize = FOV/pixelsPerLine
+print("Framerate was",fr)
+print("Field of view was ", FOV, "um")
+print("Zoom was ", zoom)
+print("Pixels are", pixSize, "um")
+startTime=re.search('epoch = (\w+)', deets, re.IGNORECASE)
+#startTime=startTime.group(1)
+print(startTime)
+if channels>2:
+   print("warning this file has two channels, split them in FIJI and start again")

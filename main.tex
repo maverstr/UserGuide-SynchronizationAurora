@@ -14,9 +14,15 @@
 \usepackage{color}
 \usepackage{pdfpages}
 \usepackage{listings}
+\renewcommand{\ttdefault}{pcr}
+
+
 \lstset{
   breaklines=true,
   postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+  %basicstyle=\ttfamily,
+  columns=fixed,
+  %keepspaces=true,
 }
 
 
@@ -49,7 +55,7 @@
 %----------------------------------------------------------------------------------------
 
 \HRule \\[0.4cm]
-{ \huge \bfseries User Guide: Devices Synchronization using Arduino MEGA controller as I2C master for data integration in tiff files}\\[0.4cm] % Title of your document
+{ \huge \bfseries Technical description and User guide: Devices Synchronization using Arduino MEGA controller as I2C master for data integration in tiff files}\\[0.4cm] % Title of your document
 \HRule \\[1.5cm]
  
 %----------------------------------------------------------------------------------------
@@ -100,9 +106,15 @@ Jamie \textsc{Johnston}\\[0.3cm] % Supervisor's Name
 
 
 \section{Introduction}
-This user guide intends to provide the user with the information required to use and understand the synchronization device developed at JohnstonLab as well as giving some clues regarding troubleshooting.
+This user guide intends to provide the user with the information required to use and understand the synchronization device developed at JohnstonLab as well as giving some clues regarding troubleshooting.\\
 
-The last version of the software is available on : \url{https://github.com/maverstr/i2cAurora}
+This device was developed as part of my internship at JohnstonLab (Leeds University, UK) during my master's years as a student engineer from the Université Libre de Bruxelles, Belgium.
+
+This device is part of the rig that allows the lab to perform in-vivo measurements and experiments on mice. This device gathers data from other devices around the lab (lick-sensor, thermography camera, motion sensors, strain gauges, ...) and allows to synchronize them before sending the values to a computer over I2C and plot the values.\\
+
+Note: The workflow, thoughts, issues, ... for this project are discussed in my OneNote.\\
+
+The latest software and documentation updates are available on my Github: \url{https://github.com/maverstr/i2cAurora}
 
 \section{Objective}
 This device gathers from different experimental devices, either digital or analog signals, through different BNC connectors and some PS/2 connectors. 
@@ -116,6 +128,14 @@ This allows to have every signal values inside each frame metadata.
 The µC also gets data from two optical mice that act as a motion sensor and does the computation for the path taken by the mouse.
 
 \section{Hardware}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 6cm]{images/synchroBox.jpg}
+    \caption{Synchronization box}
+    \label{fig:synchroBox}
+\end{figure}
+
 \subsection{Arduino MEGA}
 The µC is the Arduino MEGA, chosen for the high number of analog and digital inputs as well as easy configuration and user-friendly plotting.
 
@@ -139,16 +159,18 @@ The enclosure is chosen from RS: \url{https://uk.rs-online.com/web/p/general-pur
 \end{figure}
 
 The Plans for drilling holes are presented in appendix \ref{plans} and are available on scale 1:1 on demand.
+The box can be seen on Figure \ref{fig:synchroBox}.
+
 
 \subsection{Connectors}
 The connectors used to transmit data are BNC connectors. This is actually not the best option but the more practical to use as everything in the lab presents BNC connectors and BNC cables.
 
 There are also 2 PS/2 connectors used for the motion sensor using optical mice which communicates using PS/2.
 
+\newpage
 \section{Software}
 The µC is programmed using the Arduino IDE.
 The code is quite simple and comes in a few main parts:
-(full main code available in appendix \ref{code})
 \subsection{Motion sensor acquisition and computation}
 Using the developed libraries, the µC receives data from 2 optical mice and compute the path taken by a running mouse on a ball.
 This is all done in the additional .h and .cpp libraries.
@@ -166,29 +188,30 @@ which basically inserts the data into the pointed array.
 The rest of the incoming data from other devices are simply processed using Arduino digital or analog read functions. Some data like the strain gauge are just re-scaled to proper values.
 
 \subsection{Plotting}
-The plotting is easily done by following the guidelines for Arduino Serial plotter.
+The plotting is easily done by following the guidelines for Arduino Serial plotter. Basically, the Arduino serial plotter regularly reads the serial buffer and interprets the data. This obviously works only as long as the data are correctly sent to the serial buffer. 
 
 \subsection{I2C Communication}
 The integers value are first casted into String to be able to use the .toCharArray on them to form char arrays which can then be transmitted over I2C.
 The transmission itself is done using the Wire library.
 
 \subsection{I2C Slave}
-ScanImage acts as an I2C slave and is handled by MATLAB. This part will not be discussed here.
+ScanImage acts as an I2C slave and is handled by MATLAB. This part will not be discussed here but is explained in the relevant documentation (\url{http://scanimage.vidriotechnologies.com/display/SI2015/I2C+data+recording}).
 
 \section{How to use?}
-Simply plug the connectors to the corresponding pins (or change them in the declaration part of the code).\\
+Simply plug the connectors to the corresponding pins (or change them in the declaration part of the code).
+BNC connectors have names on the lab device for pins connections. For your own device, feel free to change the pins to your desire.\\
 
 If the optical mice motion sensor are not plugged in (or malfunctioning for whatever reason), make sure that 
 \begin{lstlisting}
 #define MOTION_SENSOR
 \end{lstlisting}
 IS commented. 
-If the optical mice are plugged in and working, and you want to use them, remove any "//" in front of that line to activate the relevant parts of the code. \\
+If the optical mice are plugged in and working, and you want to use them, remove any "//" in front of that line to activate the relevant parts of the code. You need to recompile and upload the code to the µC for the change to take effect.\\
 
 Use USB to power the Arduino and allow Serial communication to go through. Open the Serial Plotter using tools in Arduino IDE. You should see the relevant signal on the window.
 Note: the Serial rate is set to 500 000 bauds to allow fast communication of multiple signals at high sampling rate. You have to set the Serial Monitor and Plotter to this value.
 
-The values are automatically sent over I2C when triggered externally by the Labjack. If you want constant I2C communication without requiring a trigger, overwrite cameraTriggerValue to 1. Note that this may have unexpected results. 
+The values are automatically sent over I2C when triggered externally by the Labjack. If you want constant I2C communication without requiring a trigger, overwrite cameraTriggerValue to 1 (compile and upload the code to the µC for the change to take effect). Note that this may have unexpected results. 
 
 \section{Expected Results}
 When using the Serial plotter, the window should show the relevant signals in different colors (see Figure \ref{fig:plotting} where respiration signal (human) is in red, optical mice X, Y, Z in reddish, blue and green and yellow here is a copy from red simulating the i2C scaling of the value.
@@ -202,6 +225,23 @@ Other devices are not connected.).
 \end{figure}
 
 When opening the description of each frame of a tiff files (can easily be done using Python scripts (\url{https://vidriotech.gitlab.io/scanimagetiffreader-python/}), you should see a line of String data separated by spaces and representing the signals values in the order they were transmitted.
+You can also open the metadata of each .tiff files using FIJI (ImageJ) (see Figure \ref{fig:metadata}) but you will need additional libraries or python script to open the description of each frame inside the file (see Figure \ref{fig:description}).
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 6cm]{images/metadata.png}
+    \caption{Metadata as shown in "show Info" option in FIJI}
+    \label{fig:metadata}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 6cm]{images/description.png}
+    \caption{Description for a specific frame of the file}
+    \label{fig:description}
+\end{figure}
+
+A code snippet used to gather the description is shown in appendix \ref{codeDescription}.
 
 \section{Troubleshooting}
 \subsection{Nothing appears in the Serial plotter and Serial Monitor}
@@ -226,6 +266,7 @@ Make sure to comment the line:
 \begin{lstlisting}
 #define MOTION_SENSOR
 \end{lstlisting}
+and then compile and upload the code if you are not using them.
 
 \subsection{The plotting shows only a few signals and the rest are straight lines or very small}
 The plotter does not automatically sets a scaling. Each value share the same axis. Therefore, a very low analog value or a digital value (highest value being 1) will appear extremely small or as a straight line in comparison.
@@ -240,6 +281,19 @@ If not, you can change the slave adress in the code (either in integer or hex):
 \begin{lstlisting}
 Wire.beginTransmission(yourI2CSlaveAdressHere);
 \end{lstlisting}
+
+
+\subsection{My analog pins not connected read similar results to the other analog pins instead of reading zero}
+If a pin has nothing connected to it, it will be floating and there is no reason to expect a reading of zero.
+
+The Arduino Mega has only one ADC which will read the different analog pins using a multiplexer to connect the pin to the ADC. Moreover, this ADC uses a "hold\&sample" capacitor to read the pin by connecting to it, charging the capacitor, disconnecting the pin and then reading the voltage from the capacitor.
+This means that when switching to an unconnected pin, the capacitor voltage will not change and the reading from the unconnected pin will be the same than the previous pin (albeit sometimes slightly lower due to capacitor discharging when reading the voltage).
+
+To avoid it, either tie the unused pins to a pull-up or pull-down resistor (you can also do it using the integrated resistor of the Arduino chip) or comment the lines of code for reading the pins that are not connected (remember to compile and upload the code as well).\\
+
+Note also that any wires connected to the pin will act as an antenna and is likely to pick up any stray capacitance from other wires, air, ... which will show when reading the pin if it is not driven by a strong signal (pull-up, pull-down, signal input).
+
+
 
 
 \subsection{My new data doesn't appear on the plot}
@@ -289,9 +343,13 @@ Check that you plugged your signal in the correct pin. Also check that this pin 
 
 \appendix
 
-\section{C++ Main Code}
-\label{code}
-\lstinputlisting[language=C++]{180829_i2c_aurora206_V3.ino}
+\section{Frame Description reading python script}
+\label{codeDescription}
+\lstinputlisting[language= Python]{PythonCode.txt}
+
+%\section{C++ Main Code}
+%\label{code}
+%\lstinputlisting[language=C++]{180829_i2c_aurora206_V3.ino}
 
 
 
